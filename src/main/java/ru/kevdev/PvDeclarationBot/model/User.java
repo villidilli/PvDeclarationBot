@@ -1,4 +1,4 @@
-package ru.kevdev.PvDeclarationBot;
+package ru.kevdev.PvDeclarationBot.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
