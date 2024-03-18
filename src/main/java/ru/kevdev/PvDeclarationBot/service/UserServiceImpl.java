@@ -7,20 +7,17 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.kevdev.PvDeclarationBot.exception.NotFoundException;
 import ru.kevdev.PvDeclarationBot.model.User;
 import ru.kevdev.PvDeclarationBot.repo.UserRepo;
-import ru.kevdev.PvDeclarationBot.utils.ChatMapper;
 
-import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 @RequiredArgsConstructor
-public class UserSeviceImpl implements UserService {
+public class UserServiceImpl implements UserService {
 	private final UserRepo userRepo;
 	
 	@Override
-	public User getUser(String email) {
-		List<User> actualListUsers = userRepo.findAllByEmail(email);
-		if (actualListUsers.isEmpty()) throw new NotFoundException("User not found");
-		return actualListUsers.get(0);
+	public Optional<User> getUser(String email) {
+		return userRepo.findByEmail(email);
 	}
 }

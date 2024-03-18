@@ -9,47 +9,62 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import ru.kevdev.PvDeclarationBot.exception.NotFoundException;
 import ru.kevdev.PvDeclarationBot.model.User;
+import ru.kevdev.PvDeclarationBot.model.ChatModel;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+
+import static ru.kevdev.PvDeclarationBot.utils.ButtonCommand.GET_DECLARATION;
+import static ru.kevdev.PvDeclarationBot.utils.ButtonCommand.GET_QUALITY;
 
 @Service
 @RequiredArgsConstructor
 public class BotServiceImpl implements BotService {
-	
+
 	private final UserService userService;
 	private final ChatService chatService;
+
+	private SendMessage getUserInputAnswer(Update update) {
+		String messageText = update.getMessage().getText();
+		Long chatId = update.getMessage().getChatId();
+
+		if (messageText.equals("/start")) {
+			return collectAnswer(chatId, makeGreeting(update.getMessage().getChat()));
+		}
+
+		Optional<User> existedUser = userService.getUser(messageText);
+		Optional<ChatModel> existedChat = chatService.getChat(chatId);
+
+		InlineKeyboardMarkup keyboard = InlineKeyboardMarkup.builder()
+				.keyboardRow(List.of(getButton("Декларации соответствия", GET_DECLARATION.name())))
+				.keyboardRow(List.of(getButton("Качественные удостоверения", GET_QUALITY.name())))
+				.build();
+
+		if (existedChat.isPresent()) {
+			return collectAnswer(chatId, "Хммм...Вы уже авторизованы...\nПоработаем ?", keyboard);
+		} else if (existedUser.isEmpty()) {
+			return collectAnswer(chatId, "Пользователь с email: " + messageText + " не найден !\n\n" +
+													"Для получения доступа обращаться ekuznecov@ecln.ru");
+		} else if (existedChat.isEmpty()){
+			chatService.saveChat(chatId, existedUser.get());
+			return collectAnswer(chatId, "Успешная авторизация! Поехали --->\n", keyboard);
+		}
+		return collectAnswer(chatId, "Упс...Что-то накодил не так...");
+	}
+
+	private SendMessage getCallbackQueryAnswer(Update update) {
+		return collectAnswer(update.getCallbackQuery().getMessage().getChatId(), update.getCallbackQuery().getData());
+	}
 	
 	@Override
 	public SendMessage getAnswer(Update update) {
-		
 		if (update.hasMessage() && update.getMessage().hasText()) {
-			String messageText = update.getMessage().getText();
-			Long chatId = update.getMessage().getChatId();
-			
-			if (messageText.equals("/start")) {
-				return collectAnswer(chatId, makeGreeting(update.getMessage().getChat()));
-			}
-			
-			try {
-				User actualUser = userService.getUser(messageText);
-				chatService.saveChat(chatId, actualUser);
-				//TODO кнопки действий. Переделать кратко с Телеги доки
-				InlineKeyboardMarkup keyboard = InlineKeyboardMarkup.builder()
-						.keyboardRow(List.of(getButton("Загрузить ДС ЕАЭС", "GET_DECLARATION")))
-						.build();
-				return collectAnswer(chatId, "Вы успешно авторизовались !", keyboard);
-				
-				
-			} catch (NotFoundException e) {
-				return collectAnswer(chatId, "Пользователь с таким EMAIL не найден.\n" +
-														"Повторите ввод, либо напишите на почту ekuznecov@ecln.ru\n\n" +
-														"Введите ваш рабочий EMAIL --->");
-			}
+			return getUserInputAnswer(update);
+		} else if (update.hasCallbackQuery()) {
+			return getCallbackQueryAnswer(update);
 		}
-		
 		return collectAnswer(update.getMessage().getChatId(),
-				"Invalid input. Please try again /start"); //TODO подумать
+				"Упс... Что-то пошло не так"); //TODO подумать
 	}
 	
 	private InlineKeyboardButton getButton(String textOnButton, String textToServer) {
