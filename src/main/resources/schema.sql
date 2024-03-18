@@ -19,7 +19,5 @@ CREATE TABLE IF NOT EXISTS chats (
 CREATE TABLE IF NOT EXISTS products (
     erp_id BIGINT UNIQUE PRIMARY KEY,
     product_name VARCHAR(255) NOT NULL,
-    industrial_site VARCHAR(255) NOT NULL,
-    url VARCHAR(255) UNIQUE NOT NULL,
-    end_of_term date NOT NULL
+    industrial_site VARCHAR(255) NOT NULL
 );
