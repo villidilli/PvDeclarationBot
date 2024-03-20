@@ -3,6 +3,7 @@ package ru.kevdev.PvDeclarationBot.service;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
@@ -11,6 +12,7 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -18,8 +20,12 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
+import ru.kevdev.PvDeclarationBot.model.Declaration;
+import ru.kevdev.PvDeclarationBot.model.Product;
 import ru.kevdev.PvDeclarationBot.model.User;
 import ru.kevdev.PvDeclarationBot.model.ChatModel;
+import ru.kevdev.PvDeclarationBot.repo.DeclarationRepo;
+import ru.kevdev.PvDeclarationBot.repo.ProductRepo;
 import ru.kevdev.PvDeclarationBot.utils.ButtonCommand;
 
 import java.io.File;
@@ -32,12 +38,28 @@ import static ru.kevdev.PvDeclarationBot.utils.ButtonCommand.*;
 @Service
 @RequiredArgsConstructor
 public class BotService extends TelegramLongPollingBot {
-	@Value("${bot-name}")
 	private String botName;
-	@Value("${bot-token}")
 	private String botToken;
 	private UserService userService;
 	private ChatService chatService;
+	private DeclarationRepo declarationRepo;
+	private ProductRepo productRepo;
+	private Long chatId;
+	private String lastMsg = "";
+	private String curMsg = "";
+	private InlineKeyboardMarkup kb;
+
+	@Autowired
+	public BotService(@Value("${bot-name}") String botName, @Value("${bot-token}") String botToken,
+					  UserService userService, ChatService chatService,
+					  DeclarationRepo declarationRepo, ProductRepo productRepo) {
+		this.botName = botName;
+		this.botToken = botToken;
+		this.userService = userService;
+		this.chatService = chatService;
+		this.productRepo = productRepo;
+		this.declarationRepo = declarationRepo;
+	}
 
 	@Override
 	public String getBotUsername() {
@@ -59,111 +81,91 @@ public class BotService extends TelegramLongPollingBot {
 		}
 	}
 
-//	@Override
-//	public void onUpdateReceived(Update update) {
-//			getAnswer(update);
-//	}
-//	@SneakyThrows
-//	@Override
-////	public void onUpdateReceived(Update update) {
-//		Long chatId = update.getMessage().getChatId();
-//		if (update.hasMessage() && update.getMessage().hasText()) {
-//			String input = getKeyboardInputValue(update);
-//			if (input.equalsIgnoreCase("/start")) {
-//				if (chatService.getChat(chatId).isEmpty()) {
-//					execute(collectAnswer(chatId, "Для авторизации введите рабочий email -->\n "));
-//				} else {
-//					InlineKeyboardMarkup keyboard = InlineKeyboardMarkup.builder()
-//							.keyboardRow(List.of(getButton("Декларации соответствия", GET_DECLARATION.name())))
-//							.keyboardRow(List.of(getButton("Качественные удостоверения", GET_QUALITY.name())))
-//							.keyboardRow(List.of(getButton("Макеты этикеток", GET_LABEL_LAYOUTS.name())))
-//							.build();
-//					execute(collectAnswer(chatId,
-//								"Вы уже авторизованы.\n Какой документ хотите загрузить ?", keyboard));
-//				}
-//			}
-//		} else if (update.hasCallbackQuery()) {
-//
-//		} else {
-//			execute(collectAnswer(update.getMessage().getChatId(),
-//					"Упс... Что-то пошло не так"));
-//		}
-//	}
-
 	@SneakyThrows
 	@Override
 	public void onUpdateReceived(Update update) {
-		//пришло сообщение
-		System.out.println(update);
-
-	}
-
-	private InlineKeyboardMarkup getKeyboard1R1B(List<InlineKeyboardButton> buttons) {
-		InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
-		List<List<InlineKeyboardButton>> buttonsRows = new ArrayList<>();
-		for (int i = 0; i < buttons.size() - 1 ; i++) {
-			buttonsRows.add(List.of(buttons.get(i)));
-		}
-		keyboard.setKeyboard(buttonsRows);
-		return keyboard;
-	}
-
-	@SneakyThrows
-	public void getAnswer(Update update) {
+		// есть пришло сообщение через поле ввода
 		if (update.hasMessage() && update.getMessage().hasText()) {
-			getUserInputAnswer(update);
-		} else if (update.hasCallbackQuery()) {
-			getCallbackQueryAnswer(update);
-		} else {
-			execute(collectAnswer(update.getMessage().getChatId(),
-					"Упс... Что-то пошло не так"));
+			chatId = update.getMessage().getChatId();
+			curMsg = update.getMessage().getText();
+
+			if (curMsg.equalsIgnoreCase("/" + START.name())) { // обработка стартовой команды
+				doStart();
+			} else if (lastMsg != null && lastMsg.equals(AUTHORIZATION.name())) { //проверка на ввод пользователем почты
+				doAuthorization();
+			} else if (lastMsg != null && lastMsg.equals(BY_ERP_CODE.name())) {
+				execute(collectAnswer(chatId, "Загружаем декларацию")); //TODO
+				getDeclarationByERPcode(curMsg, chatId);
+			} else { //обратка бессмысленного ввода в поле, например, когда ожидается ввод команды, а приходит сообщение
+				execute(collectAnswer(chatId, "Не знаю, что с этим делать..."));
+			}
+		}
+		//если пришло команда через кнопку
+		if (update.hasCallbackQuery()) {
+			chatId = update.getCallbackQuery().getMessage().getChatId();
+			curMsg = update.getCallbackQuery().getData();
+			switch (ButtonCommand.valueOf(curMsg)) {
+				case AUTHORIZATION:
+						execute(collectAnswer(chatId, "Введите в текстовое поле ваш рабочий email"));
+					lastMsg = curMsg;
+					break;
+				case GET_DECLARATION:
+					kb = InlineKeyboardMarkup.builder()
+							.keyboardRow(List.of(getButton("Загрузка по КОДу ERP", BY_ERP_CODE.name())))
+							.keyboardRow(List.of(getButton("Загрузка по ШТРИХКОДУ", BY_BARCODE.name())))
+							.build();
+					execute(collectAnswer(chatId, "Как будем загружать?", kb));
+					lastMsg = curMsg;
+					break;
+				case BY_ERP_CODE:
+					execute(collectAnswer(chatId, "Введите КОД ЕРП"));
+					lastMsg = curMsg;
+					break;
+			}
 		}
 	}
 
-	private String readKeyboardInput(Update update) {
-		return update.getMessage().getText();
+	@SneakyThrows //TODO
+	private void getDeclarationByERPcode(String code, Long chatId) {
+		Optional<Product> existedProduct = productRepo.findById(Long.valueOf(code));
+		if (existedProduct.isPresent()) {
+			Product prod = existedProduct.get();
+			Declaration existedDeclaration = existedProduct.get().getDeclaration();
+			String pathToFile = existedProduct.get().getDeclaration().getPathToFile();
+			SendDocument documentToSend = SendDocument.builder()
+					.chatId(chatId)
+					.document(new InputFile(new File(pathToFile)))
+					.build();
+			execute(documentToSend);
+			execute(collectAnswer(chatId, "Вывести кнопки"));
+		}
 	}
 
 	@SneakyThrows
-	private void getUserInputAnswer(Update update) {
-		String messageText = update.getMessage().getText();
-		Long chatId = update.getMessage().getChatId();
-		if (messageText.equals("/start")) {
-			execute(collectAnswer(chatId, makeGreeting(update.getMessage().getChat())));
-			return;
+	private void doAuthorization() {
+		Optional<User> user = userService.getUser(curMsg); //проверка в БД на наличие пользователя
+		if (user.isPresent()) {
+			chatService.saveChat(chatId, user.get());
+			kb = InlineKeyboardMarkup.builder()
+					.keyboardRow(List.of(getButton("ДС", GET_DECLARATION.name()),
+							getButton("КУ", GET_QUALITY.name())))
+					.build();
+			execute(collectAnswer(chatId, "Отлично! Поехали!\n" + "Что будем загружать?", kb));
+			lastMsg = curMsg;
+		} else { // если пользователя нет в БД
+			execute(collectAnswer(chatId, "По-моему я вас не знаю...\nДавайте попробуем ещё раз?\nлибо напишите на ekuznecov@ecln.ru"));
 		}
-		Optional<User> existedUser = userService.getUser(messageText);
-		Optional<ChatModel> existedChat = chatService.getChat(chatId);
-		InlineKeyboardMarkup keyboard = InlineKeyboardMarkup.builder()
-				.keyboardRow(List.of(getButton("Декларации соответствия", GET_DECLARATION.name())))
-				.keyboardRow(List.of(getButton("Качественные удостоверения", GET_QUALITY.name())))
+	}
+
+	@SneakyThrows
+	private void doStart() {
+		kb = InlineKeyboardMarkup.builder()
+				.keyboardRow(List.of(getButton("Авторизоваться", AUTHORIZATION.name())))
 				.build();
-		if (existedChat.isPresent()) {
-			execute(collectAnswer(chatId, "Хммм...Вы уже авторизованы...\nПоработаем ?", keyboard));
-			return;
-		} else if (existedUser.isEmpty()) {
-			execute(collectAnswer(chatId, "Пользователь с email: " + messageText + " не найден !\n\n" +
-													"Для получения доступа обращаться ekuznecov@ecln.ru"));
-			return;
-		} else if (existedChat.isEmpty()){
-			chatService.saveChat(chatId, existedUser.get());
-			execute(collectAnswer(chatId, "Успешная авторизация! Поехали --->\n", keyboard));
-			return;
-		}
-		execute(collectAnswer(chatId, "Упс...Что-то накодил не так..."));
-	}
-
-	//todo
-	@SneakyThrows
-	private void getCallbackQueryAnswer(Update update) {
-		Long chatId = update.getCallbackQuery().getMessage().getChatId();
-		ButtonCommand command = ButtonCommand.valueOf(update.getCallbackQuery().getData());
-		switch (command) {
-			case GET_DECLARATION:
-				execute(collectAnswer(chatId, "Введите штрихкод товара"));
-				return;
-			case GET_QUALITY:  execute(collectAnswer(chatId, "Отправляю качественное"));
-		}
+		execute(collectAnswer(chatId,
+				"Вас приветствует Бот-Документ!\n" + "Давайте познакомимся ?",
+				kb));
+		lastMsg = curMsg;
 	}
 
 	private SendDocument getDeclaration(Long chatId) {
@@ -203,5 +205,15 @@ public class BotService extends TelegramLongPollingBot {
 		sb.append("Для получения информации необходимо авторизоваться\n");
 		sb.append("Введите ваш рабочий EMAIL --->");
 		return sb.toString();
+	}
+
+	private InlineKeyboardMarkup getKeyboard1R1B(List<InlineKeyboardButton> buttons) {
+		InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
+		List<List<InlineKeyboardButton>> buttonsRows = new ArrayList<>();
+		for (int i = 0; i < buttons.size() - 1 ; i++) {
+			buttonsRows.add(List.of(buttons.get(i)));
+		}
+		keyboard.setKeyboard(buttonsRows);
+		return keyboard;
 	}
 }
