@@ -27,9 +27,7 @@ import ru.kevdev.PvDeclarationBot.repo.ProductRepo;
 import ru.kevdev.PvDeclarationBot.utils.ButtonCommand;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static ru.kevdev.PvDeclarationBot.utils.ButtonCommand.*;
 
@@ -92,9 +90,8 @@ public class BotService extends TelegramLongPollingBot {
 			} else if (lastMsg != null && lastMsg.equals(AUTHORIZATION.name())) { //проверка на ввод пользователем почты
 				doAuthorization();
 			} else if (lastMsg != null && lastMsg.equals(BY_ERP_CODE.name())) {
-				String codeWithoutZero = curMsg.replace("0", "");
 				execute(collectAnswer(chatId, "Загружаю файл...\nКак будет готов, сразу пришлю")); //TODO
-				getDeclarationByErpCode(codeWithoutZero, chatId);
+				getDeclarationByErpCode(curMsg, chatId);
 				execute(collectAnswer(chatId, "\nВыберите документ -->", getDocumentTypesKeyboard()));
 			} else { //обратка бессмысленного ввода в поле, например, когда ожидается ввод команды, а приходит сообщение
 				execute(collectAnswer(chatId, "ОШИБКА -> Не знаю, что с этим делать..."));
@@ -125,12 +122,36 @@ public class BotService extends TelegramLongPollingBot {
 		}
 	}
 
+	private boolean isStringNumeric(String string) {
+		try {
+			Long.parseLong(string);
+			return true;
+		} catch (NumberFormatException e) {
+			return false;
+		}
+	}
+
+	private Long cutFrontZero(String code) { //Обрезает все нули спереди до первого "не ноля"
+		List<String> charList = new ArrayList<>(Arrays.asList(code.split("")));
+
+		for (Iterator<String> it = charList.iterator(); it.hasNext();) {
+			if (it.next().equals("0")) {
+				it.remove();
+			} else {
+				break;
+			}
+		}
+		return Long.parseLong(String.join("", charList));
+	}
+
 	@SneakyThrows //TODO
 	private void getDeclarationByErpCode(String code, Long chatId) {
-		Optional<Product> existedProduct = productRepo.findById(Long.valueOf(code));
+		if (!isStringNumeric(code)) {
+			execute(collectAnswer(chatId, "ОШИБКА --> Не является числом"));
+		}
+		Long codeWithoutZero = cutFrontZero(code);
+ 		Optional<Product> existedProduct = productRepo.findById(Long.valueOf(code));
 		if (existedProduct.isPresent()) {
-			Product prod = existedProduct.get();
-			Declaration existedDeclaration = existedProduct.get().getDeclaration();
 			String pathToFile = existedProduct.get().getDeclaration().getPathToFile();
 			File file = new File(pathToFile);
 			if (file.exists() && !file.isDirectory()) {
