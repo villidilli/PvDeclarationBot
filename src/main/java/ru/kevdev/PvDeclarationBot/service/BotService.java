@@ -1,6 +1,5 @@
 package ru.kevdev.PvDeclarationBot.service;
 
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,9 +9,9 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
+import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -23,7 +22,6 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import ru.kevdev.PvDeclarationBot.model.Declaration;
 import ru.kevdev.PvDeclarationBot.model.Product;
 import ru.kevdev.PvDeclarationBot.model.User;
-import ru.kevdev.PvDeclarationBot.model.ChatModel;
 import ru.kevdev.PvDeclarationBot.repo.DeclarationRepo;
 import ru.kevdev.PvDeclarationBot.repo.ProductRepo;
 import ru.kevdev.PvDeclarationBot.utils.ButtonCommand;
@@ -94,10 +92,12 @@ public class BotService extends TelegramLongPollingBot {
 			} else if (lastMsg != null && lastMsg.equals(AUTHORIZATION.name())) { //проверка на ввод пользователем почты
 				doAuthorization();
 			} else if (lastMsg != null && lastMsg.equals(BY_ERP_CODE.name())) {
-				execute(collectAnswer(chatId, "Загружаем декларацию")); //TODO
-				getDeclarationByERPcode(curMsg, chatId);
+				String codeWithoutZero = curMsg.replace("0", "");
+				execute(collectAnswer(chatId, "Загружаю файл...\nКак будет готов, сразу пришлю")); //TODO
+				getDeclarationByErpCode(codeWithoutZero, chatId);
+				execute(collectAnswer(chatId, "\nВыберите документ -->", getDocumentTypesKeyboard()));
 			} else { //обратка бессмысленного ввода в поле, например, когда ожидается ввод команды, а приходит сообщение
-				execute(collectAnswer(chatId, "Не знаю, что с этим делать..."));
+				execute(collectAnswer(chatId, "ОШИБКА -> Не знаю, что с этим делать..."));
 			}
 		}
 		//если пришло команда через кнопку
@@ -111,14 +111,14 @@ public class BotService extends TelegramLongPollingBot {
 					break;
 				case GET_DECLARATION:
 					kb = InlineKeyboardMarkup.builder()
-							.keyboardRow(List.of(getButton("Загрузка по КОДу ERP", BY_ERP_CODE.name())))
-							.keyboardRow(List.of(getButton("Загрузка по ШТРИХКОДУ", BY_BARCODE.name())))
+							.keyboardRow(List.of(getButton("по КОДу ERP", BY_ERP_CODE.name())))
+							.keyboardRow(List.of(getButton("по ШТРИХКОДУ", BY_BARCODE.name())))
 							.build();
-					execute(collectAnswer(chatId, "Как будем загружать?", kb));
+					execute(collectAnswer(chatId, "Варианты загрузки -->", kb));
 					lastMsg = curMsg;
 					break;
 				case BY_ERP_CODE:
-					execute(collectAnswer(chatId, "Введите КОД ЕРП"));
+					execute(collectAnswer(chatId, "Введите код ЕРП"));
 					lastMsg = curMsg;
 					break;
 			}
@@ -126,19 +126,33 @@ public class BotService extends TelegramLongPollingBot {
 	}
 
 	@SneakyThrows //TODO
-	private void getDeclarationByERPcode(String code, Long chatId) {
+	private void getDeclarationByErpCode(String code, Long chatId) {
 		Optional<Product> existedProduct = productRepo.findById(Long.valueOf(code));
 		if (existedProduct.isPresent()) {
 			Product prod = existedProduct.get();
 			Declaration existedDeclaration = existedProduct.get().getDeclaration();
 			String pathToFile = existedProduct.get().getDeclaration().getPathToFile();
-			SendDocument documentToSend = SendDocument.builder()
-					.chatId(chatId)
-					.document(new InputFile(new File(pathToFile)))
-					.build();
-			execute(documentToSend);
-			execute(collectAnswer(chatId, "Вывести кнопки"));
+			File file = new File(pathToFile);
+			if (file.exists() && !file.isDirectory()) {
+				SendDocument documentToSend = SendDocument.builder()
+						.chatId(chatId)
+						.document(new InputFile(new File(pathToFile)))
+						.build();
+				execute(documentToSend);
+			} else {
+				execute(collectAnswer(chatId, "ОШИБКА --> Файл не найден..."));
+			}
+		} else {
+			execute(collectAnswer(chatId, "ОШИБКА --> Товар не найден..."));
 		}
+	}
+
+	private InlineKeyboardMarkup getDocumentTypesKeyboard() {
+		return InlineKeyboardMarkup.builder()
+				.keyboardRow(List.of(getButton("Декларация соответствия", GET_DECLARATION.name())))
+				.keyboardRow(List.of(getButton("Качественное удостоверение", GET_QUALITY.name())))
+				.keyboardRow(List.of(getButton("Макет этикетки", GET_LABEL_MOCKUP.name())))
+				.build();
 	}
 
 	@SneakyThrows

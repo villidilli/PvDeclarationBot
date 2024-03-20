@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS declarations (
 );
 
 INSERT into declarations (number_declaration, start_date, due_date, path)
-VALUES ('111', '1990-10-10', '1991-11-11', 'C:\Users\Usserss\YandexDisk\Документы\Прочее\!!! Декл.соответствия\ПВ\Koliate.Ананасы(02.2023).pdf');
+--VALUES ('111', '1990-10-10', '1991-11-11', 'C:\Users\Usserss\YandexDisk\Документы\Прочее\!!! Декл.соответствия\ПВ\Koliate.Ананасы(02.2023).pdf');
+VALUES ('111', '1990-10-10', '1991-11-11', 'D:\Programs\yaDisk\YandexDisk\Документы\Прочее\!!! Декл.соответствия\ПВ\Koliate.Ананасы(02.2023).pdf');
+
 
 CREATE TABLE IF NOT EXISTS products (
     erp_id BIGINT UNIQUE PRIMARY KEY,
