@@ -147,7 +147,7 @@ public class BotService extends TelegramLongPollingBot {
 	private void getDeclarationByErpCode(String code, Long chatId) {
 		if (!isStringNumeric(code)) { //проверка что сообщение не содержит букв
 			execute(collectAnswer(chatId, "ОШИБКА --> Не является числом"));
-			execute(collectAnswer(chatId, "повторите попытку -->"));
+			return;
 		}
 		Long codeWithoutZero = cutFrontZero(code); // обрезаем впереди стоящие нули
 		Optional<Product> existedProduct = productRepo.findById(codeWithoutZero); //todo почитать по методы чтобы избавиться от EAGER, возможно транзакции спасут
