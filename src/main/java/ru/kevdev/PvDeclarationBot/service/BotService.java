@@ -17,6 +17,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
+import ru.kevdev.PvDeclarationBot.model.Declaration;
 import ru.kevdev.PvDeclarationBot.model.Product;
 import ru.kevdev.PvDeclarationBot.model.User;
 import ru.kevdev.PvDeclarationBot.repo.DeclarationRepo;
@@ -148,6 +149,10 @@ public class BotService extends TelegramLongPollingBot {
 		Long codeWithoutZero = cutFrontZero(code); // обрезаем впереди стоящие нули
  		Optional<Product> existedProduct = productRepo.findById(codeWithoutZero);
 		if (existedProduct.isPresent()) { // если товар найден
+			//TODO
+			Product product = existedProduct.get();
+			List<Declaration> productDeclarations = product.getDeclarations();
+
 			String pathToFile = Constant.pathDirDeclarations + existedProduct.get().getDeclaration().getFileName(); //получаем декларацию и путь
 			File file = new File(pathToFile);
 			if (file.exists() && !file.isDirectory()) { // проверяем доступен ли файл

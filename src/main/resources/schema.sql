@@ -25,20 +25,18 @@ CREATE TABLE IF NOT EXISTS declarations (
     file_name VARCHAR(255) UNIQUE NOT NULL
 );
 
---INSERT into declarations (number_declaration, start_date, due_date, path)
---VALUES ('111', '1990-10-10', '1991-11-11', 'C:\Users\Usserss\YandexDisk\Документы\Прочее\!!! Декл.соответствия\ПВ\Koliate.Ананасы(02.2023).pdf');
---VALUES ('111', '1990-10-10', '1991-11-11', 'D:\Programs\yaDisk\YandexDisk\Документы\Прочее\!!! Декл.соответствия\ПВ\Koliate.Ананасы(02.2023).pdf');
-
-
 CREATE TABLE IF NOT EXISTS products (
     erp_id BIGINT UNIQUE PRIMARY KEY,
     product_name VARCHAR(255) NOT NULL,
     industrial_site VARCHAR(255) NOT NULL,
     product_group1 VARCHAR(255) NOT NULL,
     product_group2 VARCHAR(255),
-    product_group3 VARCHAR(255),
-    declaration VARCHAR(255) REFERENCES declarations(number_declaration) ON DELETE CASCADE
+    product_group3 VARCHAR(255)
+    --declaration VARCHAR(255) REFERENCES declarations(number_declaration) ON DELETE CASCADE
 );
 
---INSERT INTO products (erp_id, product_name, industrial_site, product_group1, product_group2, product_group3, declaration)
---VALUES ('2769', 'Ананасы кольца 580мл ж/б', 'KOLIATE CO., LTD', 'Ананасы', '','','111');
+CREATE TABLE IF NOT EXISTS product_declaration (
+    product_erp_id BIGINT REFERENCES products(erp_id) ON DELETE CASCADE,
+    num_declaration VARCHAR(255) REFERENCES declarations(number_declaration) ON DELETE CASCADE,
+    PRIMARY KEY (product_erp_id, num_declaration)
+);

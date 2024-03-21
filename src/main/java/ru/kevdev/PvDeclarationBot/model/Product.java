@@ -3,6 +3,8 @@ package ru.kevdev.PvDeclarationBot.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Entity
 @Table(name = "products")
 @Getter
@@ -24,7 +26,9 @@ public class Product {
     private String group2;
     @Column(name = "product_group3")
     private String group3;
-    @ManyToOne(fetch = FetchType.EAGER) //TODO
-    @JoinColumn(name = "declaration")
-    private Declaration declaration;
+    @ManyToMany
+    @JoinTable(name = "product_declaration",
+                joinColumns = @JoinColumn(name = "product_erp_id"),
+                inverseJoinColumns = @JoinColumn(name = "num_declaration"))
+    private List<Declaration> declarations;
 }
