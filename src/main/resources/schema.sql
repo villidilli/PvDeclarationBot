@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS declarations (
     number_declaration VARCHAR(255) UNIQUE PRIMARY KEY,
     start_date DATE NOT NULL,
     due_date DATE NOT NULL,
-    path VARCHAR(255) UNIQUE NOT NULL
+    file_name VARCHAR(255) UNIQUE NOT NULL
 );
 
 --INSERT into declarations (number_declaration, start_date, due_date, path)

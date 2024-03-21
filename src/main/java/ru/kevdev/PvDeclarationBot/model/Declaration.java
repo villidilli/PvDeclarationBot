@@ -27,6 +27,6 @@ public class Declaration {
     @Column(name = "due_date")
     @DateTimeFormat(pattern = Constant.dateTimeFormat)
     private LocalDateTime dueDate;
-    @Column(name = "path")
-    private String pathToFile;
+    @Column(name = "file_name")
+    private String fileName;
 }

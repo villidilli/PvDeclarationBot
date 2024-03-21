@@ -9,22 +9,20 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
-import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
-import ru.kevdev.PvDeclarationBot.model.Declaration;
 import ru.kevdev.PvDeclarationBot.model.Product;
 import ru.kevdev.PvDeclarationBot.model.User;
 import ru.kevdev.PvDeclarationBot.repo.DeclarationRepo;
 import ru.kevdev.PvDeclarationBot.repo.ProductRepo;
 import ru.kevdev.PvDeclarationBot.utils.ButtonCommand;
+import ru.kevdev.PvDeclarationBot.utils.Constant;
 
 import java.io.File;
 import java.util.*;
@@ -135,11 +133,12 @@ public class BotService extends TelegramLongPollingBot {
 	private void getDeclarationByErpCode(String code, Long chatId) {
 		if (!isStringNumeric(code)) { //проверка что сообщение не содержит букв
 			execute(collectAnswer(chatId, "ОШИБКА --> Не является числом"));
+			execute(collectAnswer(chatId, "повторите попытку -->"));
 		}
 		Long codeWithoutZero = cutFrontZero(code); // обрезаем впереди стоящие нули
  		Optional<Product> existedProduct = productRepo.findById(codeWithoutZero);
 		if (existedProduct.isPresent()) { // если товар найден
-			String pathToFile = existedProduct.get().getDeclaration().getPathToFile(); //получаем декларацию и путь
+			String pathToFile = Constant.pathDirDeclarations + existedProduct.get().getDeclaration().getFileName(); //получаем декларацию и путь
 			File file = new File(pathToFile);
 			if (file.exists() && !file.isDirectory()) { // проверяем доступен ли файл
 				SendDocument documentToSend = SendDocument.builder()
@@ -205,17 +204,7 @@ public class BotService extends TelegramLongPollingBot {
 				.build();
 	}
 
-	private InlineKeyboardMarkup getKeyboard1R1B(List<InlineKeyboardButton> buttons) {
-		InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
-		List<List<InlineKeyboardButton>> buttonsRows = new ArrayList<>();
-		for (int i = 0; i < buttons.size() - 1 ; i++) {
-			buttonsRows.add(List.of(buttons.get(i)));
-		}
-		keyboard.setKeyboard(buttonsRows);
-		return keyboard;
-	}
-
-	private boolean isStringNumeric(String string) {
+		private boolean isStringNumeric(String string) {
 		try {
 			Long.parseLong(string);
 			return true;
