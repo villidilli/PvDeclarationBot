@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
@@ -26,7 +27,9 @@ import ru.kevdev.PvDeclarationBot.utils.ButtonCommand;
 import ru.kevdev.PvDeclarationBot.utils.Constant;
 
 import java.io.File;
+import java.io.InputStream;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static ru.kevdev.PvDeclarationBot.utils.ButtonCommand.*;
 
@@ -147,25 +150,34 @@ public class BotService extends TelegramLongPollingBot {
 			execute(collectAnswer(chatId, "повторите попытку -->"));
 		}
 		Long codeWithoutZero = cutFrontZero(code); // обрезаем впереди стоящие нули
- 		Optional<Product> existedProduct = productRepo.findById(codeWithoutZero);
-		if (existedProduct.isPresent()) { // если товар найден
-			//TODO
-			Product product = existedProduct.get();
-			List<Declaration> productDeclarations = product.getDeclarations();
+		Optional<Product> existedProduct = productRepo.findById(codeWithoutZero); //todo почитать по методы чтобы избавиться от EAGER, возможно транзакции спасут
 
-			String pathToFile = Constant.pathDirDeclarations + existedProduct.get().getDeclaration().getFileName(); //получаем декларацию и путь
-			File file = new File(pathToFile);
-			if (file.exists() && !file.isDirectory()) { // проверяем доступен ли файл
-				SendDocument documentToSend = SendDocument.builder()
-						.chatId(chatId)
-						.document(new InputFile(file))
-						.build();
-				execute(documentToSend);
-			} else {
-				execute(collectAnswer(chatId, "ОШИБКА --> Файл не найден..."));
-			}
+		if (existedProduct.isPresent()) { // если товар найден
+			downloadDeclaration(existedProduct.get());
 		} else {
 			execute(collectAnswer(chatId, "ОШИБКА --> Товар не найден..."));
+		}
+	}
+
+	@SneakyThrows
+	private void downloadDeclaration(Product product) {
+		List<Declaration> productDeclarations = product.getDeclarations();
+		List<String> pathToFiles = productDeclarations.stream()
+				.map(dec -> Constant.pathDirDeclarations + dec.getFileName())
+				.toList();
+		List<File> files = pathToFiles.stream()
+				.map(File::new)
+				.toList();
+
+		for (File file : files) {
+			if (file.exists() && !file.isDirectory()) {
+				execute(SendDocument.builder()
+						.chatId(chatId)
+						.document(new InputFile(file))
+						.build());
+			} else {
+				execute(collectAnswer(chatId, "ОШИБКА ---> Файл не найден..."));
+			}
 		}
 	}
 

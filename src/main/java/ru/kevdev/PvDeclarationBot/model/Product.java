@@ -26,7 +26,7 @@ public class Product {
     private String group2;
     @Column(name = "product_group3")
     private String group3;
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "product_declaration",
                 joinColumns = @JoinColumn(name = "product_erp_id"),
                 inverseJoinColumns = @JoinColumn(name = "num_declaration"))
