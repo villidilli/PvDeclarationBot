@@ -78,54 +78,64 @@ public class BotService extends TelegramLongPollingBot {
 	@SneakyThrows
 	@Override
 	public void onUpdateReceived(Update update) {
-		// есть пришло сообщение через поле ввода
 		if (update.hasMessage() && update.getMessage().hasText()) {
-			chatId = update.getMessage().getChatId();
-			curMsg = update.getMessage().getText();
-
-			if (curMsg.equalsIgnoreCase("/" + START.name())) { // обработка стартовой команды
-				doStart();
-			} else if (lastMsg != null && lastMsg.equals(AUTHORIZATION.name())) { //проверка на ввод пользователем почты
-				doAuthorization();
-			} else if (lastMsg != null && lastMsg.equals(BY_ERP_CODE.name())) {
-				execute(collectAnswer(chatId, "Загружаю файл...\nКак будет готов, сразу пришлю")); //TODO
-				getDeclarationByErpCode(curMsg, chatId);
-				execute(collectAnswer(chatId, "\nВыберите документ -->", getDocumentTypesKeyboard()));
-			} else { //обратка бессмысленного ввода в поле, например, когда ожидается ввод команды, а приходит сообщение
-				execute(collectAnswer(chatId, "ОШИБКА -> Не знаю, что с этим делать..."));
-			}
+			userInputProcessing(update);
 		}
-		//если пришло команда через кнопку
 		if (update.hasCallbackQuery()) {
-			chatId = update.getCallbackQuery().getMessage().getChatId();
-			curMsg = update.getCallbackQuery().getData();
-			switch (ButtonCommand.valueOf(curMsg)) {
-				case AUTHORIZATION:
-						execute(collectAnswer(chatId, "Введите в текстовое поле ваш рабочий email"));
-					lastMsg = curMsg;
-					break;
-				case GET_DECLARATION:
-					kb = InlineKeyboardMarkup.builder()
-							.keyboardRow(List.of(getButton("по КОДу ERP", BY_ERP_CODE.name())))
-							.keyboardRow(List.of(getButton("по ШТРИХКОДУ", BY_BARCODE.name())))
-							.build();
-					execute(collectAnswer(chatId, "Варианты загрузки -->", kb));
-					lastMsg = curMsg;
-					break;
-				case BY_ERP_CODE:
-					execute(collectAnswer(chatId, "Введите код ЕРП"));
-					lastMsg = curMsg;
-					break;
-				case GET_QUALITY:
-					execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки")); //TODO
-					break;
-				case GET_LABEL_MOCKUP:
-					execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки")); //TODO
-					break;
-				case BY_BARCODE:
-					execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки")); //TODO
-					break;
-			}
+			callBackQueryProcessing(update);
+		}
+	}
+
+	@SneakyThrows
+	// есть пришло сообщение через поле ввода
+	private void userInputProcessing(Update update) {
+		chatId = update.getMessage().getChatId();
+		curMsg = update.getMessage().getText();
+
+		if (curMsg.equalsIgnoreCase("/" + START.name())) { // обработка стартовой команды
+			doStart();
+		} else if (lastMsg != null && lastMsg.equals(AUTHORIZATION.name())) { //проверка на ввод пользователем почты
+			doAuthorization();
+		} else if (lastMsg != null && lastMsg.equals(BY_ERP_CODE.name())) {
+			execute(collectAnswer(chatId, "Загружаю файл...\nКак будет готов, сразу пришлю")); //TODO
+			getDeclarationByErpCode(curMsg, chatId);
+			execute(collectAnswer(chatId, "\nВыберите документ -->", getDocumentTypesKeyboard()));
+		} else { //обратка бессмысленного ввода в поле, например, когда ожидается ввод команды, а приходит сообщение
+			execute(collectAnswer(chatId, "ОШИБКА -> Не знаю, что с этим делать..."));
+		}
+	}
+
+	@SneakyThrows
+	//если пришло команда через кнопку
+	private void callBackQueryProcessing(Update update) {
+		chatId = update.getCallbackQuery().getMessage().getChatId();
+		curMsg = update.getCallbackQuery().getData();
+		switch (ButtonCommand.valueOf(curMsg)) {
+			case AUTHORIZATION:
+				execute(collectAnswer(chatId, "Введите в текстовое поле ваш рабочий email"));
+				lastMsg = curMsg;
+				break;
+			case GET_DECLARATION:
+				kb = InlineKeyboardMarkup.builder()
+						.keyboardRow(List.of(getButton("по КОДу ERP", BY_ERP_CODE.name())))
+						.keyboardRow(List.of(getButton("по ШТРИХКОДУ", BY_BARCODE.name())))
+						.build();
+				execute(collectAnswer(chatId, "Варианты загрузки -->", kb));
+				lastMsg = curMsg;
+				break;
+			case BY_ERP_CODE:
+				execute(collectAnswer(chatId, "Введите код ЕРП"));
+				lastMsg = curMsg;
+				break;
+			case GET_QUALITY:
+				execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки")); //TODO
+				break;
+			case GET_LABEL_MOCKUP:
+				execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки")); //TODO
+				break;
+			case BY_BARCODE:
+				execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки")); //TODO
+				break;
 		}
 	}
 
