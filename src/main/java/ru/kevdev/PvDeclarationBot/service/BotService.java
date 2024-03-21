@@ -118,46 +118,33 @@ public class BotService extends TelegramLongPollingBot {
 					execute(collectAnswer(chatId, "Введите код ЕРП"));
 					lastMsg = curMsg;
 					break;
+				case GET_QUALITY:
+					execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки")); //TODO
+					break;
+				case GET_LABEL_MOCKUP:
+					execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки")); //TODO
+					break;
+				case BY_BARCODE:
+					execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки")); //TODO
+					break;
 			}
 		}
-	}
-
-	private boolean isStringNumeric(String string) {
-		try {
-			Long.parseLong(string);
-			return true;
-		} catch (NumberFormatException e) {
-			return false;
-		}
-	}
-
-	private Long cutFrontZero(String code) { //Обрезает все нули спереди до первого "не ноля"
-		List<String> charList = new ArrayList<>(Arrays.asList(code.split("")));
-
-		for (Iterator<String> it = charList.iterator(); it.hasNext();) {
-			if (it.next().equals("0")) {
-				it.remove();
-			} else {
-				break;
-			}
-		}
-		return Long.parseLong(String.join("", charList));
 	}
 
 	@SneakyThrows //TODO
 	private void getDeclarationByErpCode(String code, Long chatId) {
-		if (!isStringNumeric(code)) {
+		if (!isStringNumeric(code)) { //проверка что сообщение не содержит букв
 			execute(collectAnswer(chatId, "ОШИБКА --> Не является числом"));
 		}
-		Long codeWithoutZero = cutFrontZero(code);
- 		Optional<Product> existedProduct = productRepo.findById(Long.valueOf(code));
-		if (existedProduct.isPresent()) {
-			String pathToFile = existedProduct.get().getDeclaration().getPathToFile();
+		Long codeWithoutZero = cutFrontZero(code); // обрезаем впереди стоящие нули
+ 		Optional<Product> existedProduct = productRepo.findById(codeWithoutZero);
+		if (existedProduct.isPresent()) { // если товар найден
+			String pathToFile = existedProduct.get().getDeclaration().getPathToFile(); //получаем декларацию и путь
 			File file = new File(pathToFile);
-			if (file.exists() && !file.isDirectory()) {
+			if (file.exists() && !file.isDirectory()) { // проверяем доступен ли файл
 				SendDocument documentToSend = SendDocument.builder()
 						.chatId(chatId)
-						.document(new InputFile(new File(pathToFile)))
+						.document(new InputFile(file))
 						.build();
 				execute(documentToSend);
 			} else {
@@ -166,14 +153,6 @@ public class BotService extends TelegramLongPollingBot {
 		} else {
 			execute(collectAnswer(chatId, "ОШИБКА --> Товар не найден..."));
 		}
-	}
-
-	private InlineKeyboardMarkup getDocumentTypesKeyboard() {
-		return InlineKeyboardMarkup.builder()
-				.keyboardRow(List.of(getButton("Декларация соответствия", GET_DECLARATION.name())))
-				.keyboardRow(List.of(getButton("Качественное удостоверение", GET_QUALITY.name())))
-				.keyboardRow(List.of(getButton("Макет этикетки", GET_LABEL_MOCKUP.name())))
-				.build();
 	}
 
 	@SneakyThrows
@@ -185,7 +164,8 @@ public class BotService extends TelegramLongPollingBot {
 					.keyboardRow(List.of(getButton("ДС", GET_DECLARATION.name()),
 							getButton("КУ", GET_QUALITY.name())))
 					.build();
-			execute(collectAnswer(chatId, "Отлично! Поехали!\n" + "Что будем загружать?", kb));
+			execute(collectAnswer(chatId, "Успешная авторизация!"));
+			execute(collectAnswer(chatId, "\nВыберите документ -->", getDocumentTypesKeyboard()));
 			lastMsg = curMsg;
 		} else { // если пользователя нет в БД
 			execute(collectAnswer(chatId, "По-моему я вас не знаю...\nДавайте попробуем ещё раз?\nлибо напишите на ekuznecov@ecln.ru"));
@@ -201,13 +181,6 @@ public class BotService extends TelegramLongPollingBot {
 				"Вас приветствует Бот-Документ!\n" + "Давайте познакомимся ?",
 				kb));
 		lastMsg = curMsg;
-	}
-
-	private SendDocument getDeclaration(Long chatId) {
-		return SendDocument.builder()
-				.document(new InputFile(new File("C:\\Users\\Usserss\\Documents\\temp\\ОиДТ.xlsx")))
-				.chatId(chatId)
-				.build();
 	}
 
 	private InlineKeyboardButton getButton(String textOnButton, String textToServer) {
@@ -232,16 +205,6 @@ public class BotService extends TelegramLongPollingBot {
 				.build();
 	}
 
-	private String makeGreeting(Chat chat) {
-		StringBuilder sb = new StringBuilder();
-		sb.append("Доброго времени суток, ");
-		sb.append(chat.getFirstName() + " ");
-		sb.append(chat.getLastName() + " !\n\n");
-		sb.append("Для получения информации необходимо авторизоваться\n");
-		sb.append("Введите ваш рабочий EMAIL --->");
-		return sb.toString();
-	}
-
 	private InlineKeyboardMarkup getKeyboard1R1B(List<InlineKeyboardButton> buttons) {
 		InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
 		List<List<InlineKeyboardButton>> buttonsRows = new ArrayList<>();
@@ -250,5 +213,35 @@ public class BotService extends TelegramLongPollingBot {
 		}
 		keyboard.setKeyboard(buttonsRows);
 		return keyboard;
+	}
+
+	private boolean isStringNumeric(String string) {
+		try {
+			Long.parseLong(string);
+			return true;
+		} catch (NumberFormatException e) {
+			return false;
+		}
+	}
+
+	private Long cutFrontZero(String code) { //Обрезает все нули спереди до первого "не ноля"
+		List<String> charList = new ArrayList<>(Arrays.asList(code.split("")));
+
+		for (Iterator<String> it = charList.iterator(); it.hasNext();) {
+			if (it.next().equals("0")) {
+				it.remove();
+			} else {
+				break;
+			}
+		}
+		return Long.parseLong(String.join("", charList));
+	}
+
+	private InlineKeyboardMarkup getDocumentTypesKeyboard() {
+		return InlineKeyboardMarkup.builder()
+				.keyboardRow(List.of(getButton("Декларация соответствия", GET_DECLARATION.name())))
+				.keyboardRow(List.of(getButton("Качественное удостоверение", GET_QUALITY.name())))
+				.keyboardRow(List.of(getButton("Макет этикетки", GET_LABEL_MOCKUP.name())))
+				.build();
 	}
 }
