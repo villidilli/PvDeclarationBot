@@ -2,10 +2,13 @@ package ru.kevdev.PvDeclarationBot.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.hibernate.JDBCException;
+import org.hibernate.exception.SQLGrammarException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -28,6 +31,7 @@ import ru.kevdev.PvDeclarationBot.utils.Constant;
 
 import java.io.File;
 import java.io.InputStream;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -48,7 +52,8 @@ public class BotService extends TelegramLongPollingBot {
 	private InlineKeyboardMarkup kb;
 
 	@Autowired
-	public BotService(@Value("${bot-name}") String botName, @Value("${bot-token}") String botToken,
+	public BotService(@Value("${bot-name}") String botName,
+					  @Value("${bot-token}") String botToken,
 					  UserService userService, ChatService chatService,
 					  DeclarationRepo declarationRepo, ProductRepo productRepo) {
 		this.botName = botName;
@@ -143,19 +148,23 @@ public class BotService extends TelegramLongPollingBot {
 		}
 	}
 
-	@SneakyThrows //TODO
+	//TODO
+	@SneakyThrows
 	private void getDeclarationByErpCode(String code, Long chatId) {
 		if (!isStringNumeric(code)) { //проверка что сообщение не содержит букв
-			execute(collectAnswer(chatId, "ОШИБКА --> Не является числом"));
+				execute(collectAnswer(chatId, "ОШИБКА --> Не является числом"));
 			return;
 		}
 		Long codeWithoutZero = cutFrontZero(code); // обрезаем впереди стоящие нули
-		Optional<Product> existedProduct = productRepo.findById(codeWithoutZero); //todo почитать по методы чтобы избавиться от EAGER, возможно транзакции спасут
-
-		if (existedProduct.isPresent()) { // если товар найден
-			downloadDeclaration(existedProduct.get());
-		} else {
-			execute(collectAnswer(chatId, "ОШИБКА --> Товар не найден..."));
+		try {
+			Optional<Product> existedProduct = productRepo.findById(codeWithoutZero); //todo почитать по методы чтобы избавиться от EAGER, возможно транзакции спасут
+			if (existedProduct.isPresent()) { // если товар найден
+				downloadDeclaration(existedProduct.get());
+			} else {
+					execute(collectAnswer(chatId, "ОШИБКА --> Товар не найден..."));
+			}
+		} catch (InvalidDataAccessResourceUsageException e) {
+				execute(collectAnswer(chatId, "Ошибка --> Проблема с запросом в БД"));
 		}
 	}
 

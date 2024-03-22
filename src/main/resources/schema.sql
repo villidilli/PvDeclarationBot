@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS products (
     industrial_site VARCHAR(255) NOT NULL,
     product_group1 VARCHAR(255) NOT NULL,
     product_group2 VARCHAR(255),
-    product_group3 VARCHAR(255)
+    product_group3 VARCHAR(255),
+    barcode VARCHAR(255)
     --declaration VARCHAR(255) REFERENCES declarations(number_declaration) ON DELETE CASCADE
 );
 

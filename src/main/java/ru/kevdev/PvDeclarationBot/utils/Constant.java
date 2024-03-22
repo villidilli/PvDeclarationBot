@@ -6,5 +6,5 @@ import lombok.experimental.UtilityClass;
 public class Constant {
     public final String dateTimeFormat = "yyyy-MM-dd";
     public final String pathDirDeclarations =
-            "D:\\Programs\\yaDisk\\YandexDisk\\Документы\\Прочее\\!!! Декл.соответствия\\ПВ\\";
+            "C:\\Users\\Usserss\\YandexDisk\\Документы\\Прочее\\!!! Декл.соответствия\\ПВ\\";
 }
