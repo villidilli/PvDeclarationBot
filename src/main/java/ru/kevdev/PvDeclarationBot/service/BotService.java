@@ -148,7 +148,6 @@ public class BotService extends TelegramLongPollingBot {
 		}
 	}
 
-	//TODO
 	@SneakyThrows
 	private void getDeclarationByErpCode(String code, Long chatId) {
 		if (!isStringNumeric(code)) { //проверка что сообщение не содержит букв
@@ -161,7 +160,7 @@ public class BotService extends TelegramLongPollingBot {
 			if (existedProduct.isPresent()) { // если товар найден
 				downloadDeclaration(existedProduct.get());
 			} else {
-					execute(collectAnswer(chatId, "ОШИБКА --> Товар не найден..."));
+				execute(collectAnswer(chatId, "ОШИБКА --> Товар не найден..."));
 			}
 		} catch (InvalidDataAccessResourceUsageException e) {
 				execute(collectAnswer(chatId, "Ошибка --> Проблема с запросом в БД"));
