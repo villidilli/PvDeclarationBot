@@ -31,4 +31,6 @@ public class Product {
                 joinColumns = @JoinColumn(name = "product_erp_id"),
                 inverseJoinColumns = @JoinColumn(name = "num_declaration"))
     private List<Declaration> declarations;
+    @Column(name = "barcode")
+    private String barcode;
 }

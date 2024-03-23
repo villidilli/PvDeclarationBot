@@ -22,10 +22,10 @@ public class Declaration {
     @Column(name = "number_declaration")
     private String declarationNum;
     @Column(name = "start_date")
-    @DateTimeFormat(pattern = Constant.dateTimeFormat)
+    @DateTimeFormat(pattern = Constant.DATE_TIME_FORMAT)
     private LocalDateTime startDate;
     @Column(name = "due_date")
-    @DateTimeFormat(pattern = Constant.dateTimeFormat)
+    @DateTimeFormat(pattern = Constant.DATE_TIME_FORMAT)
     private LocalDateTime dueDate;
     @Column(name = "file_name")
     private String fileName;
