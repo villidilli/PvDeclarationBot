@@ -2,7 +2,6 @@ package ru.kevdev.PvDeclarationBot.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
@@ -21,7 +20,6 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import ru.kevdev.PvDeclarationBot.model.Declaration;
 import ru.kevdev.PvDeclarationBot.model.Product;
 import ru.kevdev.PvDeclarationBot.model.User;
-import ru.kevdev.PvDeclarationBot.repo.DeclarationRepo;
 import ru.kevdev.PvDeclarationBot.repo.ProductRepo;
 import java.io.File;
 import java.util.*;
@@ -38,7 +36,6 @@ public class BotService extends TelegramLongPollingBot {
 	private String botToken;
 	private final UserService userService;
 	private final ChatService chatService;
-	private final DeclarationRepo declarationRepo;
 	private final ProductRepo productRepo;
 	private Long chatId;
 	private String lastInput;
@@ -86,16 +83,23 @@ public class BotService extends TelegramLongPollingBot {
 
 		if (curInput.equalsIgnoreCase(START)) { // обработка стартовой команды
 			doStart();
-		} else if (lastCbq != null && lastCbq.equals(AUTHORIZATION)) { //если последняя команда авторизация, значит введена почта
+			return;
+		}
+		if (lastCbq != null && lastCbq.equals(AUTHORIZATION)) { //если последняя команда авторизация, значит введена почта
 			doAuthorization(curInput);
-		} else if (lastCbq != null && lastCbq.equals(GET_BY_ERP_CODE)) {
+			return;
+		}
+		if (lastCbq != null && lastCbq.equals(GET_BY_ERP_CODE)) {
 			execute(collectAnswer(chatId, "Загружаю файл...\nКак будет готов, сразу пришлю"));
 			getDeclarationByErpCode(curInput, chatId);
-		} else if (lastCbq != null && lastCbq.equals(GET_BY_BARCODE)) { //если посл.команда getbybarcode, значит введено штрихкод
-			getIndustrialSites(curInput, chatId);
-		} else { //обратка бессмысленного ввода в поле, например, когда ожидается ввод команды, а приходит сообщение
-			execute(collectAnswer(chatId, "ОШИБКА -> Не знаю, что с этим делать..."));
+			return;
 		}
+		if (lastCbq != null && lastCbq.equals(GET_BY_BARCODE)) { //если посл.команда getbybarcode, значит введено штрихкод
+			getIndustrialSites(curInput, chatId);
+			return;
+		}
+		//обратка бессмысленного ввода в поле, например, когда ожидается ввод команды, а приходит сообщение
+		execute(collectAnswer(chatId, "ОШИБКА -> Не знаю, что с этим делать..."));
 	}
 
 	@SneakyThrows
@@ -109,7 +113,6 @@ public class BotService extends TelegramLongPollingBot {
 			lastCbq = curCbq;
 			return;
 		}
-
 		if (curCbq.equalsIgnoreCase(GET_DECLARATION)) {
 			kb = InlineKeyboardMarkup.builder()
 					.keyboardRow(List.of(getButton("по КОДу ERP", GET_BY_ERP_CODE)))
@@ -119,29 +122,24 @@ public class BotService extends TelegramLongPollingBot {
 			lastCbq = curCbq;
 			return;
 		}
-
 		if (curCbq.equalsIgnoreCase(GET_BY_ERP_CODE)) {
 			execute(collectAnswer(chatId, "Введите код ЕРП"));
 			lastCbq = curCbq;
 			return;
 		}
-
 		if (curCbq.equalsIgnoreCase(GET_BY_BARCODE)) {
 			execute(collectAnswer(chatId, "Введите штрихкод"));
 			lastCbq = curCbq;
 			return;
 		}
-
 		if (lastCbq.equals(GET_BY_BARCODE)) {
 			getDeclarationByIndustrialSiteAndBarcode(curCbq, chatId);
 			return;
 		}
-
 		if (curCbq.equalsIgnoreCase(GET_QUALITY)) {
 			execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки"));
 			return;
 		}
-
 		if (curCbq.equalsIgnoreCase(GET_LABEL_MOCKUP)) {
 			execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки"));
 			return;
@@ -159,7 +157,7 @@ public class BotService extends TelegramLongPollingBot {
 
 	@SneakyThrows
 	private void getIndustrialSites(String barcode, Long chatId) {
-		if (!isStringNumeric(barcode)) { //проверка что сообщение не содержит букв
+		if (isStringNumeric(barcode)) { //проверка что сообщение не содержит букв
 			execute(collectAnswer(chatId, ERROR_INPUT_NOT_NUM));
 			return;
 		}
@@ -180,7 +178,7 @@ public class BotService extends TelegramLongPollingBot {
 
 	@SneakyThrows
 	private void getDeclarationByErpCode(String code, Long chatId) {
-		if (!isStringNumeric(code)) { //проверка что сообщение не содержит букв
+		if (isStringNumeric(code)) { //проверка что сообщение не содержит букв
 				execute(collectAnswer(chatId, ERROR_INPUT_NOT_NUM));
 			return;
 		}
@@ -271,12 +269,12 @@ public class BotService extends TelegramLongPollingBot {
 				.build();
 	}
 
-		private boolean isStringNumeric(String string) {
+	private boolean isStringNumeric(String string) {
 		try {
 			Long.parseLong(string);
-			return true;
-		} catch (NumberFormatException e) {
 			return false;
+		} catch (NumberFormatException e) {
+			return true;
 		}
 	}
 
