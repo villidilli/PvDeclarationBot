@@ -2,15 +2,12 @@ package ru.kevdev.PvDeclarationBot.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.hibernate.JDBCException;
-import org.hibernate.exception.SQLGrammarException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
@@ -26,16 +23,13 @@ import ru.kevdev.PvDeclarationBot.model.Product;
 import ru.kevdev.PvDeclarationBot.model.User;
 import ru.kevdev.PvDeclarationBot.repo.DeclarationRepo;
 import ru.kevdev.PvDeclarationBot.repo.ProductRepo;
-import ru.kevdev.PvDeclarationBot.utils.ButtonCommand;
+import ru.kevdev.PvDeclarationBot.utils.CbqCommand;
 import ru.kevdev.PvDeclarationBot.utils.Constant;
 
 import java.io.File;
-import java.io.InputStream;
-import java.sql.SQLException;
 import java.util.*;
-import java.util.stream.Collectors;
 
-import static ru.kevdev.PvDeclarationBot.utils.ButtonCommand.*;
+import static ru.kevdev.PvDeclarationBot.utils.CbqCommand.*;
 
 @Service
 @RequiredArgsConstructor
@@ -47,8 +41,10 @@ public class BotService extends TelegramLongPollingBot {
 	private DeclarationRepo declarationRepo;
 	private ProductRepo productRepo;
 	private Long chatId;
-	private String lastMsg = "";
-	private String curMsg = "";
+	private String lastInput;
+	private String curInput;
+	private String lastCbq;
+	private String curCbq;
 	private InlineKeyboardMarkup kb;
 
 	@Autowired
@@ -99,16 +95,15 @@ public class BotService extends TelegramLongPollingBot {
 	// есть пришло сообщение через поле ввода
 	private void userInputProcessing(Update update) {
 		chatId = update.getMessage().getChatId();
-		curMsg = update.getMessage().getText();
+		curInput = update.getMessage().getText();
 
-		if (curMsg.equalsIgnoreCase("/" + START.name())) { // обработка стартовой команды
+		if (curInput.equalsIgnoreCase("/" + START.name())) { // обработка стартовой команды
 			doStart();
-		} else if (lastMsg != null && lastMsg.equals(AUTHORIZATION.name())) { //проверка на ввод пользователем почты
-			doAuthorization();
-		} else if (lastMsg != null && lastMsg.equals(BY_ERP_CODE.name())) {
+		} else if (lastCbq != null && lastCbq.equals(AUTHORIZATION.name())) { //если последняя команда авторизация, значит введена почта
+			doAuthorization(curInput);
+		} else if (lastCbq != null && lastCbq.equals(GET_BY_ERP_CODE.name())) {
 			execute(collectAnswer(chatId, "Загружаю файл...\nКак будет готов, сразу пришлю")); //TODO
-			getDeclarationByErpCode(curMsg, chatId);
-			execute(collectAnswer(chatId, "\nВыберите документ -->", getDocumentTypesKeyboard()));
+			getDeclarationByErpCode(curInput, chatId);
 		} else { //обратка бессмысленного ввода в поле, например, когда ожидается ввод команды, а приходит сообщение
 			execute(collectAnswer(chatId, "ОШИБКА -> Не знаю, что с этим делать..."));
 		}
@@ -118,23 +113,23 @@ public class BotService extends TelegramLongPollingBot {
 	//если пришло команда через кнопку
 	private void callBackQueryProcessing(Update update) {
 		chatId = update.getCallbackQuery().getMessage().getChatId();
-		curMsg = update.getCallbackQuery().getData();
-		switch (ButtonCommand.valueOf(curMsg)) {
+		curCbq = update.getCallbackQuery().getData();
+		switch (CbqCommand.valueOf(curCbq)) {
 			case AUTHORIZATION:
 				execute(collectAnswer(chatId, "Введите в текстовое поле ваш рабочий email"));
-				lastMsg = curMsg;
+				lastCbq = curCbq;
 				break;
 			case GET_DECLARATION:
 				kb = InlineKeyboardMarkup.builder()
-						.keyboardRow(List.of(getButton("по КОДу ERP", BY_ERP_CODE.name())))
-						.keyboardRow(List.of(getButton("по ШТРИХКОДУ", BY_BARCODE.name())))
+						.keyboardRow(List.of(getButton("по КОДу ERP", GET_BY_ERP_CODE.name())))
+						.keyboardRow(List.of(getButton("по ШТРИХКОДУ", GET_BY_BARCODE.name())))
 						.build();
 				execute(collectAnswer(chatId, "Варианты загрузки -->", kb));
-				lastMsg = curMsg;
+				lastCbq = curCbq;
 				break;
-			case BY_ERP_CODE:
+			case GET_BY_ERP_CODE:
 				execute(collectAnswer(chatId, "Введите код ЕРП"));
-				lastMsg = curMsg;
+				lastCbq = curCbq;
 				break;
 			case GET_QUALITY:
 				execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки")); //TODO
@@ -142,7 +137,7 @@ public class BotService extends TelegramLongPollingBot {
 			case GET_LABEL_MOCKUP:
 				execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки")); //TODO
 				break;
-			case BY_BARCODE:
+			case GET_BY_BARCODE:
 				execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки")); //TODO
 				break;
 		}
@@ -159,6 +154,7 @@ public class BotService extends TelegramLongPollingBot {
 			Optional<Product> existedProduct = productRepo.findById(codeWithoutZero); //todo почитать по методы чтобы избавиться от EAGER, возможно транзакции спасут
 			if (existedProduct.isPresent()) { // если товар найден
 				downloadDeclaration(existedProduct.get());
+				execute(collectAnswer(chatId, "\nВыберите документ -->", getDocumentTypesKeyboard()));
 			} else {
 				execute(collectAnswer(chatId, "ОШИБКА --> Товар не найден..."));
 			}
@@ -190,8 +186,8 @@ public class BotService extends TelegramLongPollingBot {
 	}
 
 	@SneakyThrows
-	private void doAuthorization() {
-		Optional<User> user = userService.getUser(curMsg); //проверка в БД на наличие пользователя
+	private void doAuthorization(String email) {
+		Optional<User> user = userService.getUser(email); //проверка в БД на наличие пользователя
 		if (user.isPresent()) {
 			chatService.saveChat(chatId, user.get());
 			kb = InlineKeyboardMarkup.builder()
@@ -200,7 +196,7 @@ public class BotService extends TelegramLongPollingBot {
 					.build();
 			execute(collectAnswer(chatId, "Успешная авторизация!"));
 			execute(collectAnswer(chatId, "\nВыберите документ -->", getDocumentTypesKeyboard()));
-			lastMsg = curMsg;
+			lastInput = email;
 		} else { // если пользователя нет в БД
 			execute(collectAnswer(chatId, "По-моему я вас не знаю...\nДавайте попробуем ещё раз?\nлибо напишите на ekuznecov@ecln.ru"));
 		}
@@ -214,7 +210,7 @@ public class BotService extends TelegramLongPollingBot {
 		execute(collectAnswer(chatId,
 				"Вас приветствует Бот-Документ!\n" + "Давайте познакомимся ?",
 				kb));
-		lastMsg = curMsg;
+		lastInput = curInput;
 	}
 
 	private InlineKeyboardButton getButton(String textOnButton, String textToServer) {

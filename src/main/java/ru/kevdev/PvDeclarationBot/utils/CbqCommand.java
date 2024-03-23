@@ -3,12 +3,12 @@ package ru.kevdev.PvDeclarationBot.utils;
 import lombok.Getter;
 
 @Getter
-public enum ButtonCommand {
+public enum CbqCommand {
     START,
     AUTHORIZATION,
     GET_DECLARATION,
     GET_QUALITY,
     GET_LABEL_MOCKUP,
-    BY_ERP_CODE,
-    BY_BARCODE;
+    GET_BY_ERP_CODE,
+    GET_BY_BARCODE;
 }
