@@ -2,14 +2,12 @@ package ru.kevdev.PvDeclarationBot.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import org.springframework.stereotype.Service;
-
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
@@ -20,13 +18,11 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
-
 import ru.kevdev.PvDeclarationBot.model.Declaration;
 import ru.kevdev.PvDeclarationBot.model.Product;
 import ru.kevdev.PvDeclarationBot.model.User;
 import ru.kevdev.PvDeclarationBot.repo.DeclarationRepo;
 import ru.kevdev.PvDeclarationBot.repo.ProductRepo;
-
 import java.io.File;
 import java.util.*;
 
@@ -36,31 +32,20 @@ import static ru.kevdev.PvDeclarationBot.utils.Constant.*;
 @Service
 @RequiredArgsConstructor
 public class BotService extends TelegramLongPollingBot {
+	@Value("${bot-name}")
 	private String botName;
+	@Value("${bot-token}")
 	private String botToken;
-	private UserService userService;
-	private ChatService chatService;
-	private DeclarationRepo declarationRepo;
-	private ProductRepo productRepo;
+	private final UserService userService;
+	private final ChatService chatService;
+	private final DeclarationRepo declarationRepo;
+	private final ProductRepo productRepo;
 	private Long chatId;
 	private String lastInput;
 	private String curInput;
 	private String lastCbq;
 	private String curCbq;
 	private InlineKeyboardMarkup kb;
-
-	@Autowired
-	public BotService(@Value("${bot-name}") String botName,
-					  @Value("${bot-token}") String botToken,
-					  UserService userService, ChatService chatService,
-					  DeclarationRepo declarationRepo, ProductRepo productRepo) {
-		this.botName = botName;
-		this.botToken = botToken;
-		this.userService = userService;
-		this.chatService = chatService;
-		this.productRepo = productRepo;
-		this.declarationRepo = declarationRepo;
-	}
 
 	@Override
 	public String getBotUsername() {
