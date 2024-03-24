@@ -33,4 +33,9 @@ public class Product {
     private List<Declaration> declarations;
     @Column(name = "barcode")
     private String barcode;
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinTable(name = "product_label_mockup",
+                joinColumns = @JoinColumn(name = "product_erp_id"),
+                inverseJoinColumns = @JoinColumn(name = "mockup_id"))
+    private LabelMockup labelMockup;
 }

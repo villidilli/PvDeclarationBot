@@ -141,9 +141,10 @@ public class BotService extends TelegramLongPollingBot {
 			return;
 		}
 		if (curCbq.equalsIgnoreCase(GET_LABEL_MOCKUP)) {
-			execute(collectAnswer(chatId, "Извиняюсь, функционал в стадии разработки"));
+			execute(collectAnswer(chatId, "ОШИБКА --> Неизвестная команда")); //todo
 			return;
 		}
+		execute(collectAnswer(chatId, "ОШИБКА --> Неизвестная команда"));
 	}
 
 	@SneakyThrows

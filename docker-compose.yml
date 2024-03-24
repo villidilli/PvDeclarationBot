@@ -1,0 +1,24 @@
+version: '3.1'
+services:
+  bot-service:
+    image: tgbot_documents
+    container_name: tgbot_documents
+    ports:
+      - "8080:8080"
+    depends_on:
+      - bot-db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://bot-db:5432/pvdocuments
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+
+  bot-db:
+    image: postgres:14-alpine
+    container_name: bot-db
+    ports:
+      - "6542:5432"
+    environment:
+      - POSTGRES_DB=pvdocuments
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+
