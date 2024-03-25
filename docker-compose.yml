@@ -1,8 +1,8 @@
 version: '3.1'
 services:
   bot-service:
-    image: tgbot_documents
-    container_name: tgbot_documents
+    image: bot-service
+    container_name: bot-service
     ports:
       - "8080:8080"
     depends_on:
