@@ -86,6 +86,7 @@ public class BotService extends TelegramLongPollingBot {
 			return;
 		}
 		if (lastCbq != null && lastCbq.equals(AUTHORIZATION)) { //если последняя команда авторизация, значит введена почта
+			execute(collectAnswer(chatId, "Уже ищу вас..."));
 			doAuthorization(curInput);
 			return;
 		}
@@ -99,7 +100,7 @@ public class BotService extends TelegramLongPollingBot {
 			return;
 		}
 		//обратка бессмысленного ввода в поле, например, когда ожидается ввод команды, а приходит сообщение
-		execute(collectAnswer(chatId, "ОШИБКА -> Не знаю, что с этим делать..."));
+		execute(collectAnswer(chatId, BAD_INPUT));
 	}
 
 	@SneakyThrows
@@ -188,12 +189,14 @@ public class BotService extends TelegramLongPollingBot {
 			Optional<Product> existedProduct = productRepo.findById(codeWithoutZero); //todo почитать по методы чтобы избавиться от EAGER, возможно транзакции спасут
 			if (existedProduct.isPresent()) { // если товар найден
 				downloadDeclaration(List.of(existedProduct.get()));
-				execute(collectAnswer(chatId, "\nВыберите документ -->", getDocumentTypesKeyboard()));
+				execute(collectAnswer(chatId, SELECT_DOCUMENT, getDocumentTypesKeyboard()));
 			} else {
-				execute(collectAnswer(chatId, "ОШИБКА --> Товар не найден...", getDocumentTypesKeyboard()));
+				execute(collectAnswer(chatId, ERROR_PRODUCT_NOT_FOUND));
+				execute(collectAnswer(chatId, SELECT_DOCUMENT, getDocumentTypesKeyboard()));
 			}
 		} catch (InvalidDataAccessResourceUsageException e) {
-				execute(collectAnswer(chatId, "Ошибка --> Проблема с запросом в БД", getDocumentTypesKeyboard()));
+				execute(collectAnswer(chatId, ERROR_BAD_SQL));
+				execute(collectAnswer(chatId, SELECT_DOCUMENT, getDocumentTypesKeyboard()));
 		}
 	}
 
@@ -214,7 +217,8 @@ public class BotService extends TelegramLongPollingBot {
 							.document(new InputFile(file))
 							.build());
 				} else {
-					execute(collectAnswer(chatId, "ОШИБКА ---> Файл не найден...", getDocumentTypesKeyboard()));
+					execute(collectAnswer(chatId, ERROR_FILE_NOT_FOUND));
+					execute(collectAnswer(chatId, SELECT_DOCUMENT, getDocumentTypesKeyboard()));
 				}
 			}
 		}
@@ -230,10 +234,10 @@ public class BotService extends TelegramLongPollingBot {
 							getButton("КУ", GET_QUALITY)))
 					.build();
 			execute(collectAnswer(chatId, "Успешная авторизация!"));
-			execute(collectAnswer(chatId, "\nВыберите документ -->", getDocumentTypesKeyboard()));
+			execute(collectAnswer(chatId, SELECT_DOCUMENT, getDocumentTypesKeyboard()));
 			lastInput = email;
 		} else { // если пользователя нет в БД
-			execute(collectAnswer(chatId, "По-моему я вас не знаю...\nДавайте попробуем ещё раз?\nлибо напишите на ekuznecov@ecln.ru"));
+			execute(collectAnswer(chatId, BAD_AUTHORIZATION));
 		}
 	}
 
