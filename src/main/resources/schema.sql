@@ -1,7 +1,5 @@
 DROP TABLE IF EXISTS chats;
 DROP TABLE IF EXISTS users;
---DROP TABLE IF EXISTS products;
---DROP TABLE IF EXISTS declarations;
 
 CREATE TABLE IF NOT EXISTS users (
     user_name VARCHAR(255) NOT NULL,
@@ -38,7 +36,6 @@ CREATE TABLE IF NOT EXISTS products (
     product_group2 VARCHAR(255),
     product_group3 VARCHAR(255),
     barcode VARCHAR(255)
-    --declaration VARCHAR(255) REFERENCES declarations(number_declaration) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS product_label_mockup (

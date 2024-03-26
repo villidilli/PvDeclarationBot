@@ -5,9 +5,7 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class Constant {
     public final String DATE_TIME_FORMAT = "yyyy-MM-dd";
-    public final String PATH_DIR_DECLARATIONS =
-//            "sftp://root@185.112.102.46/home/myfiles/declarations/";
-            "/var/lib/docker/";
+    public final String PATH_DIR_DECLARATIONS = "/var/lib/docker/volumes/decl_data/"; // смонтированная папка из хоста
     public final String ERROR_INPUT_NOT_NUM = "ОШИБКА --> Введенное значение не является числом";
     public final String START = "/start";
     public final String AUTHORIZATION = "AUTHORIZATION";

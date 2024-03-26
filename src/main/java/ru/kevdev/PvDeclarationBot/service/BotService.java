@@ -90,7 +90,7 @@ public class BotService extends TelegramLongPollingBot {
 			return;
 		}
 		if (lastCbq != null && lastCbq.equals(GET_BY_ERP_CODE)) {
-			execute(collectAnswer(chatId, "Загружаю файл...\nКак будет готов, сразу пришлю"));
+			execute(collectAnswer(chatId, "Загружаю файл..."));
 			getDeclarationByErpCode(curInput, chatId);
 			return;
 		}
@@ -190,10 +190,10 @@ public class BotService extends TelegramLongPollingBot {
 				downloadDeclaration(List.of(existedProduct.get()));
 				execute(collectAnswer(chatId, "\nВыберите документ -->", getDocumentTypesKeyboard()));
 			} else {
-				execute(collectAnswer(chatId, "ОШИБКА --> Товар не найден..."));
+				execute(collectAnswer(chatId, "ОШИБКА --> Товар не найден...", getDocumentTypesKeyboard()));
 			}
 		} catch (InvalidDataAccessResourceUsageException e) {
-				execute(collectAnswer(chatId, "Ошибка --> Проблема с запросом в БД"));
+				execute(collectAnswer(chatId, "Ошибка --> Проблема с запросом в БД", getDocumentTypesKeyboard()));
 		}
 	}
 
@@ -214,7 +214,7 @@ public class BotService extends TelegramLongPollingBot {
 							.document(new InputFile(file))
 							.build());
 				} else {
-					execute(collectAnswer(chatId, "ОШИБКА ---> Файл не найден..."));
+					execute(collectAnswer(chatId, "ОШИБКА ---> Файл не найден...", getDocumentTypesKeyboard()));
 				}
 			}
 		}
