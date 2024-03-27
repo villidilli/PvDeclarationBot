@@ -1,12 +1,14 @@
 package ru.kevdev.PvDeclarationBot.exception;
 
+import org.aspectj.lang.annotation.AfterThrowing;
+import org.aspectj.lang.annotation.Aspect;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 
-@ControllerAdvice
+@Aspect
 public class ExceptionHandler {
-    @ExceptionHandler(value = BadRequestException.class)
-    public ErrorMessage handleBadRequest(BadRequestException exception) {
+    @AfterThrowing(pointcut = "execution(* ru.kevdev.PvDeclarationBot.*(..))", throwing="e")
+    public void handleBadRequest(NotFoundException e) {
         //code...
-        return errMsg;
+//        return errMsg;
     }
 }
