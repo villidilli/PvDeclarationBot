@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class Declaration {
+public class Declaration extends Document {
     @Id
     @Column(name = "number_declaration")
     private String declarationNum;
