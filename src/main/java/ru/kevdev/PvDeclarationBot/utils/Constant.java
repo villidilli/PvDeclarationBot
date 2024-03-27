@@ -18,6 +18,8 @@ public class Constant {
     public final String GET_DECLARATION = "GET_DECLARATION";
     public final String GET_QUALITY = "GET_QUALITY";
     public final String GET_LABEL_MOCKUP = "GET_LABEL_MOCKUP";
-    public final String GET_BY_ERP_CODE = "GET_BY_ERP_CODE";
-    public final String GET_BY_BARCODE = "GET_BY_BARCODE";
+    public final String GET_DECL_BY_ERP_CODE = "GET_DECL_BY_ERP_CODE";
+    public final String GET_DECL_BY_BARCODE = "GET_DECL_BY_BARCODE";
+    public final String GET_MOCK_BY_ERP_CODE = "GET_MOCK_BY_ERP_CODE";
+    public final String GET_MOCK_BY_BARCODE = "GET_MOCK_BY_BARCODE";
 }

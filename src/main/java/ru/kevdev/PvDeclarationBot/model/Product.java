@@ -26,16 +26,16 @@ public class Product {
     private String group2;
     @Column(name = "product_group3")
     private String group3;
+    @Column(name = "barcode")
+    private String barcode;
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "product_declaration",
                 joinColumns = @JoinColumn(name = "product_erp_id"),
                 inverseJoinColumns = @JoinColumn(name = "num_declaration"))
     private List<Declaration> declarations;
-    @Column(name = "barcode")
-    private String barcode;
-    @OneToOne(fetch = FetchType.EAGER)
+    @OneToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "product_label_mockup",
                 joinColumns = @JoinColumn(name = "product_erp_id"),
                 inverseJoinColumns = @JoinColumn(name = "mockup_id"))
-    private LabelMockup labelMockup;
+    private List<LabelMockup> labelMockups;
 }

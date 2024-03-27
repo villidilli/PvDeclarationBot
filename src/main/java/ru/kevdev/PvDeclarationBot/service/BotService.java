@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
+import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
@@ -17,6 +18,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
+import ru.kevdev.PvDeclarationBot.exception.NotFoundException;
 import ru.kevdev.PvDeclarationBot.model.Declaration;
 import ru.kevdev.PvDeclarationBot.model.Product;
 import ru.kevdev.PvDeclarationBot.model.User;
@@ -25,7 +27,6 @@ import java.io.File;
 import java.util.*;
 
 import static ru.kevdev.PvDeclarationBot.utils.Constant.*;
-
 
 @Service
 @RequiredArgsConstructor
@@ -90,13 +91,18 @@ public class BotService extends TelegramLongPollingBot {
 			doAuthorization(curInput);
 			return;
 		}
-		if (lastCbq != null && lastCbq.equals(GET_BY_ERP_CODE)) {
+		if (lastCbq != null && lastCbq.equals(GET_DECL_BY_ERP_CODE)) {
 			execute(collectAnswer(chatId, "Загружаю файл..."));
 			getDeclarationByErpCode(curInput, chatId);
 			return;
 		}
-		if (lastCbq != null && lastCbq.equals(GET_BY_BARCODE)) { //если посл.команда getbybarcode, значит введено штрихкод
+		if (lastCbq != null && lastCbq.equals(GET_DECL_BY_BARCODE)) { //если посл.команда getbybarcode, значит введено штрихкод
 			getIndustrialSites(curInput, chatId);
+			return;
+		}
+		if (lastCbq != null && lastCbq.equals(GET_MOCK_BY_ERP_CODE)) {
+			execute(collectAnswer(chatId, "Загружаю файл..."));
+			getLabelMockupsByErpCode(curInput, chatId);
 			return;
 		}
 		//обратка бессмысленного ввода в поле, например, когда ожидается ввод команды, а приходит сообщение
@@ -116,24 +122,24 @@ public class BotService extends TelegramLongPollingBot {
 		}
 		if (curCbq.equalsIgnoreCase(GET_DECLARATION)) {
 			kb = InlineKeyboardMarkup.builder()
-					.keyboardRow(List.of(getButton("по КОДу ERP", GET_BY_ERP_CODE)))
-					.keyboardRow(List.of(getButton("по ШТРИХКОДУ", GET_BY_BARCODE)))
+					.keyboardRow(List.of(getButton("по КОДу ERP", GET_DECL_BY_ERP_CODE)))
+					.keyboardRow(List.of(getButton("по ШТРИХКОДУ", GET_DECL_BY_BARCODE)))
 					.build();
 			execute(collectAnswer(chatId, "Варианты загрузки -->", kb));
 			lastCbq = curCbq;
 			return;
 		}
-		if (curCbq.equalsIgnoreCase(GET_BY_ERP_CODE)) {
+		if (curCbq.equalsIgnoreCase(GET_DECL_BY_ERP_CODE)) {
 			execute(collectAnswer(chatId, "Введите код ЕРП"));
 			lastCbq = curCbq;
 			return;
 		}
-		if (curCbq.equalsIgnoreCase(GET_BY_BARCODE)) {
+		if (curCbq.equalsIgnoreCase(GET_DECL_BY_BARCODE)) {
 			execute(collectAnswer(chatId, "Введите штрихкод"));
 			lastCbq = curCbq;
 			return;
 		}
-		if (lastCbq.equals(GET_BY_BARCODE)) {
+		if (lastCbq.equals(GET_DECL_BY_BARCODE)) {
 			getDeclarationByIndustrialSiteAndBarcode(curCbq, chatId);
 			return;
 		}
@@ -142,7 +148,12 @@ public class BotService extends TelegramLongPollingBot {
 			return;
 		}
 		if (curCbq.equalsIgnoreCase(GET_LABEL_MOCKUP)) {
-			execute(collectAnswer(chatId, "ОШИБКА --> Неизвестная команда")); //todo
+			kb = InlineKeyboardMarkup.builder()
+					.keyboardRow(List.of(getButton("по КОДу ERP", GET_MOCK_BY_ERP_CODE)))
+					.keyboardRow(List.of(getButton("по ШТРИХКОДУ", GET_MOCK_BY_BARCODE)))
+					.build();
+			execute(collectAnswer(chatId, "Варианты загрузки -->", kb));
+			lastCbq = curCbq;
 			return;
 		}
 		execute(collectAnswer(chatId, "ОШИБКА --> Неизвестная команда"));
@@ -159,7 +170,7 @@ public class BotService extends TelegramLongPollingBot {
 
 	@SneakyThrows
 	private void getIndustrialSites(String barcode, Long chatId) {
-		if (isStringNumeric(barcode)) { //проверка что сообщение не содержит букв
+		if (isStringNotNumeric(barcode)) { //проверка что сообщение не содержит букв
 			execute(collectAnswer(chatId, ERROR_INPUT_NOT_NUM));
 			return;
 		}
@@ -180,7 +191,7 @@ public class BotService extends TelegramLongPollingBot {
 
 	@SneakyThrows
 	private void getDeclarationByErpCode(String code, Long chatId) {
-		if (isStringNumeric(code)) { //проверка что сообщение не содержит букв
+		if (isStringNotNumeric(code)) { //проверка что сообщение не содержит букв
 				execute(collectAnswer(chatId, ERROR_INPUT_NOT_NUM));
 			return;
 		}
@@ -198,6 +209,29 @@ public class BotService extends TelegramLongPollingBot {
 				execute(collectAnswer(chatId, ERROR_BAD_SQL));
 				execute(collectAnswer(chatId, SELECT_DOCUMENT, getDocumentTypesKeyboard()));
 		}
+	}
+
+	@SneakyThrows
+	private void getLabelMockupsByErpCode(String code, Long chatId) {
+		if (isStringNotNumeric(code)) { //проверка что сообщение не содержит букв
+			execute(collectAnswer(chatId, ERROR_INPUT_NOT_NUM));
+			return;
+		}
+		Long codeWithoutZero = cutFrontZero(code); // обрезаем впереди стоящие нули
+		try {
+			Optional<Product> existedProduct = productRepo.findById(codeWithoutZero); //todo почитать по методы чтобы избавиться от EAGER, возможно транзакции спасут
+			if (existedProduct.isPresent()) { // если товар найден
+				downloadDeclaration(List.of(existedProduct.get()));
+				execute(collectAnswer(chatId, SELECT_DOCUMENT, getDocumentTypesKeyboard()));
+			} else {
+				execute(collectAnswer(chatId, ERROR_PRODUCT_NOT_FOUND));
+				execute(collectAnswer(chatId, SELECT_DOCUMENT, getDocumentTypesKeyboard()));
+			}
+		} catch (InvalidDataAccessResourceUsageException e) {
+			execute(collectAnswer(chatId, ERROR_BAD_SQL));
+			execute(collectAnswer(chatId, SELECT_DOCUMENT, getDocumentTypesKeyboard()));
+		}
+
 	}
 
 	@SneakyThrows
@@ -274,7 +308,7 @@ public class BotService extends TelegramLongPollingBot {
 				.build();
 	}
 
-	private boolean isStringNumeric(String string) {
+	private boolean isStringNotNumeric(String string) {
 		try {
 			Long.parseLong(string);
 			return false;

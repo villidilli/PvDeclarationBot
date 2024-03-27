@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS products (
 
 CREATE TABLE IF NOT EXISTS product_label_mockup (
     product_erp_id BIGINT REFERENCES products(erp_id) ON DELETE CASCADE,
-    mockup_id BIGINT REFERENCES label_mockups(mockup_id) ON DELETE CASCADE
+    mockup_id BIGINT REFERENCES label_mockups(mockup_id) ON DELETE CASCADE,
+    PRIMARY KEY (product_erp_id, mockup_id)
 );
 
 CREATE TABLE IF NOT EXISTS product_declaration (
