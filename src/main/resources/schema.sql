@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 INSERT into users (user_name, user_email, partner_name)
-VALUES ('Evgenii', 'ekuznecov@ecln.ru', 'ECOLAND');
+VALUES ('Evgenii', 'ekuznecov@ecln.ru', 'ECOLAND'),
+       ('Alexandr', 'akovalev@vkirzhanov.ru', 'ECOLAND');
 
 CREATE TABLE IF NOT EXISTS chats (
     chat_id_telegram BIGINT UNIQUE PRIMARY KEY,
