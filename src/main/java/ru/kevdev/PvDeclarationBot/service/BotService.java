@@ -14,6 +14,8 @@ import ru.kevdev.PvDeclarationBot.repo.ProductRepo;
 
 import java.io.File;
 import java.util.*;
+import java.util.stream.Collectors;
+
 import static ru.kevdev.PvDeclarationBot.utils.Constant.*;
 
 @Service
@@ -104,16 +106,18 @@ public class BotService {
 			bot.execute(collectAnswer(chatId, "ОШИБКА --> Неизвестная команда"));
 	}
 
-
+	//TODO BUG
 	private void getDeclarationByIndustrialSiteAndBarcode(Bot bot, String indSiteAndBarcode, Long chatId)
 																						throws TelegramApiException {
 		//под 0 - площадка, под 1 - штрихкод
 		String[] data = indSiteAndBarcode.split(",");
-		List<Product> products = productRepo.findByIndustrialSiteAndBarcode(data[0], data[1]);
-		for (Product prod : products) {
-			List<Declaration> declarations = prod.getDeclarations();
-			downloadFile(bot, declarations, PATH_DIR_DECLARATIONS);
-		}
+		List<Product> products = productRepo.findByIndustrialSiteAndBarcode(data[0], data[1]); // получил список товаров по шк
+		Set<Declaration> uniqueDeclarations = new HashSet<>(); //сет чтобы не было дублей № декл если у одинаковая на 2 кода
+		products.stream()
+				.map(Product::getDeclarations)
+				.forEach(uniqueDeclarations::addAll);
+		downloadFile(bot, uniqueDeclarations, PATH_DIR_DECLARATIONS);
+
 		bot.execute(collectAnswer(chatId, SELECT_DOCUMENT, getDocumentTypesKeyboard()));
 	}
 
@@ -147,9 +151,10 @@ public class BotService {
 		Long codeWithoutZero = cutFrontZero(code); // обрезаем впереди стоящие нули
 		Optional<Product> existedProduct = productRepo.findById(codeWithoutZero); //todo почитать по методы чтобы избавиться от EAGER, возможно транзакции спасут
 		if (existedProduct.isPresent()) { // если товар найден
+			//TODO искать тут косяк
 			switch (lastCbq) {
-				case GET_DECL_BY_ERP_CODE: downloadFile(bot, existedProduct.get().getDeclarations(), PATH_DIR_DECLARATIONS); break;
-				case GET_MOCK_BY_ERP_CODE: downloadFile(bot, existedProduct.get().getLabelMockups(), PATH_DIR_LABEL_MOCKUPS); break;
+				case GET_DECL_BY_ERP_CODE: downloadFile(bot, new HashSet<>(existedProduct.get().getDeclarations()), PATH_DIR_DECLARATIONS); break;
+				case GET_MOCK_BY_ERP_CODE: downloadFile(bot, new HashSet<>(existedProduct.get().getLabelMockups()), PATH_DIR_LABEL_MOCKUPS); break;
 			}
 		} else {
 			bot.execute(collectAnswer(chatId, ERROR_PRODUCT_NOT_FOUND));
@@ -157,7 +162,7 @@ public class BotService {
 		bot.execute(collectAnswer(chatId, SELECT_DOCUMENT, getDocumentTypesKeyboard()));
 	}
 
-	private void downloadFile(Bot bot, List<? extends Document> documents, String pathToDir) throws TelegramApiException {
+	private void downloadFile(Bot bot, Set<? extends Document> documents, String pathToDir) throws TelegramApiException {
 		List<String> pathToFiles = documents.stream()
 				.map(document -> pathToDir + document.getFileName())
 				.toList();
