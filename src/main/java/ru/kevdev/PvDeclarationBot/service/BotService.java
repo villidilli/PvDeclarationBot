@@ -106,7 +106,6 @@ public class BotService {
 			bot.execute(collectAnswer(chatId, "ОШИБКА --> Неизвестная команда"));
 	}
 
-	//TODO BUG
 	private void getDeclarationByIndustrialSiteAndBarcode(Bot bot, String indSiteAndBarcode, Long chatId)
 																						throws TelegramApiException {
 		//под 0 - площадка, под 1 - штрихкод
@@ -116,9 +115,6 @@ public class BotService {
 		for (Product product : products) {
 			uniqueDeclarations.addAll(product.getDeclarations());
 		}
-//		products.stream()
-//				.map(Product::getDeclarations)
-//				.forEach(uniqueDeclarations::addAll);
 		downloadFile(bot, uniqueDeclarations, PATH_DIR_DECLARATIONS);
 
 		bot.execute(collectAnswer(chatId, SELECT_DOCUMENT, getDocumentTypesKeyboard()));
@@ -154,7 +150,6 @@ public class BotService {
 		Long codeWithoutZero = cutFrontZero(code); // обрезаем впереди стоящие нули
 		Optional<Product> existedProduct = productRepo.findById(codeWithoutZero); //todo почитать по методы чтобы избавиться от EAGER, возможно транзакции спасут
 		if (existedProduct.isPresent()) { // если товар найден
-			//TODO искать тут косяк
 			switch (lastCbq) {
 				case GET_DECL_BY_ERP_CODE: downloadFile(bot, new HashSet<>(existedProduct.get().getDeclarations()), PATH_DIR_DECLARATIONS); break;
 				case GET_MOCK_BY_ERP_CODE: downloadFile(bot, new HashSet<>(existedProduct.get().getLabelMockups()), PATH_DIR_LABEL_MOCKUPS); break;
