@@ -113,9 +113,12 @@ public class BotService {
 		String[] data = indSiteAndBarcode.split(",");
 		List<Product> products = productRepo.findByIndustrialSiteAndBarcode(data[0], data[1]); // получил список товаров по шк
 		Set<Declaration> uniqueDeclarations = new HashSet<>(); //сет чтобы не было дублей № декл если у одинаковая на 2 кода
-		products.stream()
-				.map(Product::getDeclarations)
-				.forEach(uniqueDeclarations::addAll);
+		for (Product product : products) {
+			uniqueDeclarations.addAll(product.getDeclarations());
+		}
+//		products.stream()
+//				.map(Product::getDeclarations)
+//				.forEach(uniqueDeclarations::addAll);
 		downloadFile(bot, uniqueDeclarations, PATH_DIR_DECLARATIONS);
 
 		bot.execute(collectAnswer(chatId, SELECT_DOCUMENT, getDocumentTypesKeyboard()));
